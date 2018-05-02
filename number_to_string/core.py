@@ -58,16 +58,23 @@ class NumberToStringHelper:
     def __init__(self, number, currency_main=None, currency_additional=None):
         """
 
-        :param number:
+        :param number: int
         :param currency_main:
         :param currency_additional:
         """
-        self.number = int(float(number))
+        self.number = int(number)
         self.additional = int(round(float(number) - self.number, 3) * 100)
-        self.currency_main = currency_main or ('', '', '')
-        self.currency_additional = currency_additional or ('', '', '')
+        self.currency_main = currency_main or ('рубль', 'рубля', 'рублей')
+        self.currency_additional = (
+                currency_additional or
+                ('копеек', 'копеек', 'копеек')
+        )
 
     def get_string(self):
+        """
+        Вовращает число пропусью
+        :return: str
+        """
         items = self._get_items()
 
         list_items = []
@@ -98,6 +105,9 @@ class NumberToStringHelper:
                 str_item = str_number
 
             list_items.append(str_item)
+
+        if items == ['0']:
+            list_items = ['ноль']
 
         base = ' '.join(reversed(list_items))
         pattern = (
@@ -190,11 +200,11 @@ class NumberToStringHelper:
         return self._get_base_currency(self.currency_additional, self.number)
 
 
-def get_string_by_number(number, currency_base=None, currency_additional=None):
+def get_string_by_number(number, currency_main=None, currency_additional=None):
 
     string = NumberToStringHelper(
         number=number,
-        currency_main=currency_base,
+        currency_main=currency_main,
         currency_additional=currency_additional,
     ).get_string()
 

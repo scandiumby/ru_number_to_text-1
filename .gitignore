@@ -1,6 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 .idea/
-*/__pycache__/
-.pyc
+__pycache__
+.pytest_cache
+*/*.pyc
 /number_to_string.egg-info/
 /dist/

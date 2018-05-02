@@ -14,4 +14,15 @@
     string = get_string_by_number(123)
     assert string == 'Сто двадцать три рубля 00 копеек'
 
+    currency_main = ('тенге', 'тенге', 'тенге')
+    currency_additional = ('тиын', 'тиына', 'тиынов')
+    string = get_string_by_number(
+        325, 
+        currency_main, 
+        currency_additional,
+    )
+    assert string == 'Триста двадцать пять тенге 00 тиынов'
+    
+## Скоро:
 
+Добавление английского языка

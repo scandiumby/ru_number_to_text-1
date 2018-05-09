@@ -12,8 +12,8 @@ def test_without_main():
 
 
 def test_with_main_and_additional():
-    number = 122.13
-    assert 'Сто двадцать два рубля 13 копеек' == get_string_by_number(number)
+    number = 122.01
+    assert 'Сто двадцать два рубля 01 копейка' == get_string_by_number(number)
 
 
 def test_with_main_additional_and_currency():
@@ -22,3 +22,13 @@ def test_with_main_additional_and_currency():
     assert 'Двести тридцать пять рублей 15 копеек' == get_string_by_number(
         number=number
     )
+
+def test_with_big_number():
+    number = 12345678912.54
+
+    assert ('Двенадцать миллиардов '
+            'триста сорок пять миллионов '
+            'шестьсот семьдесят восемь тысяч '
+            'девятьсот двенадцать рублей 54 копейки' == get_string_by_number(
+        number=number
+    ))

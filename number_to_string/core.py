@@ -1,7 +1,8 @@
 from collections import namedtuple
+from decimal import Decimal
 
 
-CurrencyInfo = namedtuple('CurrencyInfo', 'base additional')
+CurrencyInfo = namedtuple('CurrencyInfo', 'main additional')
 
 
 class NumberToStringHelper:
@@ -57,29 +58,70 @@ class NumberToStringHelper:
 
     def __init__(self, number, currency_main=None, currency_additional=None):
         """
-
-        :param number: int
-        :param currency_main:
-        :param currency_additional:
+        :param number: int, str, decimal.Decimal or float
+        :param currency_main: tuple or list with tree items
+            example ('рубль', 'рубля', 'рублей')
+        :param currency_additional: tuple or list with tree items
+            example ('копейка', 'копейки', 'копеек')
         """
-        self.number = int(number)
-        self.additional = int(round(float(number) - self.number, 3) * 100)
-        self.currency_main = currency_main or ('рубль', 'рубля', 'рублей')
-        self.currency_additional = (
-                currency_additional or
-                ('копеек', 'копеек', 'копеек')
+        # Начальные значение
+        self.number = number
+        self.currency_main = currency_main
+        self.currency_additional = currency_additional
+
+        # Значения необходимые для перевода в строку
+        self.decimal_number = Decimal(number)
+        self.main_number = int(number)
+        self.additional_number = self._get_additional_number()
+        self.currency_info = CurrencyInfo(
+            currency_main or ('рубль', 'рубля', 'рублей'),
+            currency_additional or ('копейка', 'копейки', 'копеек')
         )
+
+    def _get_additional_number(self):
+        return int(round(self.decimal_number - self.main_number, 3) * 100)
 
     def get_string(self):
         """
         Вовращает число пропусью
         :return: str
         """
-        items = self._get_items()
 
-        list_items = []
+        string_list_items = [
+            self._get_string_item(number, digit_item_number)
+            for digit_item_number, number in enumerate(self._item_generator())
+        ]
 
-        value_tuples = (
+        base = ' '.join(reversed(string_list_items)) or 'ноль'
+
+        pattern = (
+            '{base} '
+            '{currency_base} '
+            '{additional:0>2} '
+            '{currency_additional}'
+        )
+        string = pattern.format(
+            base=base,
+            currency_base=self._get_main_currency(),
+            additional=self.additional_number,
+            currency_additional=self._get_additional_currency()
+        )
+        return string.capitalize()
+
+    def _item_generator(self):
+        """
+        Разбивает числа по 3 цифры
+        И возвращает по очереди, сначала еденицы
+        затем тысячи, затем милионы и так далее
+        """
+        number = self.main_number
+        while number != 0:
+            yield number % 1000
+            number = number // 1000
+
+    @property
+    def value_tuples(self):
+        return (
             ('', '', ''),
             ('тысяча', 'тысячи', 'тысяч'),
             ('миллион', 'миллиона', 'миллионов'),
@@ -94,68 +136,47 @@ class NumberToStringHelper:
             ('дециллион', 'дециллиона', 'дециллионов'),
             ('ундециллион', 'ундециллиона', 'ундециллионов'),
         )
-        for i, number in enumerate(items):
-            is_thousands = i == 1
-            str_number = self._get_str_number(number, is_thousands)
-            str_end = self._get_ends(number, value_tuples[i])
 
-            if str_end:
-                str_item = ' '.join([str_number, str_end])
-            else:
-                str_item = str_number
+    def _get_string_item(self, number, digit_item_number):
+        is_thousands = digit_item_number == 1
+        str_number = self._get_number_string(number, is_thousands)
+        str_end = self._get_ends(number, self.value_tuples[digit_item_number])
 
-            list_items.append(str_item)
+        str_item = ' '.join([str_number, str_end]) if str_end else str_number
 
-        if items == ['0']:
-            list_items = ['ноль']
+        return str_item
 
-        base = ' '.join(reversed(list_items))
-        pattern = (
-            '{base} '
-            '{currency_base} '
-            '{additional:0>2} '
-            '{currency_additional}'
+    def _get_main_currency(self):
+        return self._get_ends(
+            self.decimal_number,
+            self.currency_info.main,
         )
-        string = pattern.format(
-            base=base,
-            currency_base=self._get_main_currency(),
-            additional=self.additional,
-            currency_additional=self._get_additional_currency()
-        )
-        return string.capitalize()
 
-    def _get_items(self):
-        """
-        Разбивает числа по 3 цифры
-        Возвращает список
-        Сначало еденицы, затем тысячи, затем милионы и так далее
-        """
-        value = str(self.number)
-        items = []
-        while len(value) > 3:
-            items.append(value[-3:])
-            value = value[:-3]
-        items.append(value)
-        return items
+    def _get_additional_currency(self):
+
+        return self._get_ends(
+            self.additional_number,
+            self.currency_info.additional,
+        )
 
     @staticmethod
     def _get_ends(number, value_tuple=None):
         number = int(number)
-        if value_tuple is None:
-            value_tuple = ('тысяча', 'тысячи', 'тысяч')
 
-        if (number % 100) > 20:
-            number = number % 10
-        else:
-            number = number % 20
+        value_tuple = value_tuple or ('тысяча', 'тысячи', 'тысяч')
+
+        number = number % 10 if number % 100 > 20 else number % 20
+
         if number == 1:
             return value_tuple[0]
-        elif 2 <= number <= 4:
+
+        if 2 <= number <= 4:
             return value_tuple[1]
+
         return value_tuple[2]
 
     @classmethod
-    def _get_str_number(cls, number, is_thousands=False):
+    def _get_number_string(cls, number, is_thousands=False):
         """
         Возвращает сткору числа из трёх чисел
 
@@ -176,9 +197,12 @@ class NumberToStringHelper:
             if int(number[1]) != 1
             else changed_units[int(number[1:])]
         )
+
         units = ''
+
         if int(number[1]) != 1:
             units = changed_units[int(number[2])]
+
         list_items = filter(None, [
             hundreds,
             dozens,
@@ -186,21 +210,21 @@ class NumberToStringHelper:
         ])
         return ' '.join(list_items)
 
-    def _get_base_currency(self, currency_base, number):
-        if self.number % 10 == 1:
-            return currency_base[0]
-        if 1 < number % 10 < 5:
-            return currency_base[1]
-        return currency_base[2]
-
-    def _get_main_currency(self):
-        return self._get_base_currency(self.currency_main, self.number)
-
-    def _get_additional_currency(self):
-        return self._get_base_currency(self.currency_additional, self.number)
-
 
 def get_string_by_number(number, currency_main=None, currency_additional=None):
+    """
+    Переводит число в строку словами и добавляет название валюты
+
+    :param number: int, float, decimal.Decimal or str(only digits and dot)
+        example 12.3
+
+    :param currency_main: tuple or list with tree items
+        example ('рубль', 'рубля', 'рублей')
+    :param currency_additional: tuple or list with tree items
+        example ('копейка', 'копейки', 'копеек')
+    :return: str (capitalize)
+        example 'Сто двадцать два рубля 13 копеек'
+    """
 
     string = NumberToStringHelper(
         number=number,
